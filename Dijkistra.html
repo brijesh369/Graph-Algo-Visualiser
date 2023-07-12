@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dijkstra's Algorithm Visualizer</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #canvas {
+      border: 1px solid black;
+      margin-bottom: 20px;
+    }
+
+    #path-canvas {
+      border: 1px solid black;
+    }
+
+    table {
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+  <canvas id="path-canvas" width="800" height="100"></canvas>
+  <br/>
+  <button onclick="generateGraph()">Generate Random Graph</button>
+  <button onclick="runDijkstra()">Run Dijkstra's Algorithm</button>
+
+  <div id="result"></div>
+
+  <script>
+    // Colors
+    const COLORS = {
+      WHITE: "#ffffff",
+      BLACK: "#000000",
+      GREEN: "#00ff00",
+      RED: "#ff0000",
+      BLUE: "#0000ff",
+      YELLOW: "#ffff00",
+    };
+
+    // Canvas dimensions
+    const WIDTH = 800;
+    const HEIGHT = 600;
+
+    // Create canvas elements
+    const canvas = document.getElementById("canvas");
+    const pathCanvas = document.getElementById("path-canvas");
+    const ctx = canvas.getContext("2d");
+    const pathCtx = pathCanvas.getContext("2d");
+
+    // Class to represent a node
+    class Node {
+      constructor(index, x, y) {
+        this.index = index;
+        this.x = x;
+        this.y = y;
+        this.neighbors = [];
+        this.distance = Infinity;
+        this.visited = false;
+        this.previous = null;
+      }
+
+      addNeighbor(neighbor, weight) {
+        this.neighbors.push({ node: neighbor, weight });
+      }
+
+      reset() {
+        this.distance = Infinity;
+        this.visited = false;
+        this.previous = null;
+      }
+    }
+
+    // Function to draw the graph on the canvas
+    function drawGraph(nodes) {
+      ctx.fillStyle = COLORS.WHITE;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      for (const node of nodes) {
+        ctx.fillStyle = COLORS.BLACK;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = "10px Arial";
+        ctx.fillStyle = COLORS.WHITE;
+        ctx.textAlign = "center";
+        ctx.fillText(node.index.toString(), node.x, node.y + 3);
+
+        for (const neighbor of node.neighbors) {
+          ctx.strokeStyle = COLORS.BLUE;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(node.x, node.y);
+          ctx.lineTo(nodes[neighbor.node].x, nodes[neighbor.node].y);
+          ctx.stroke();
+
+          // Display the edge weight
+          ctx.font = "8px Arial";
+          ctx.fillStyle = COLORS.BLACK;
+          ctx.textAlign = "center";
+          const textX = (node.x + nodes[neighbor.node].x) / 2;
+          const textY = (node.y + nodes[neighbor.node].y) / 2;
+          ctx.fillText(neighbor.weight.toString(), textX, textY);
+        }
+      }
+    }
+
+    // Function to draw the shortest path on the path canvas
+    function drawShortestPath(nodes, path) {
+      pathCtx.clearRect(0, 0, WIDTH, 100);
+      pathCtx.font = "16px Arial";
+      pathCtx.fillStyle = COLORS.BLACK;
+      pathCtx.textAlign = "center";
+      const pathText = path.map(node => node.index).join(" -> ");
+      pathCtx.fillText(`Shortest Path: ${pathText}`, WIDTH / 2, 50);
+    }
+
+    // Function to generate a random graph with at least 7 nodes
+    function generateGraph() {
+      const nodes = [];
+      const numNodes = Math.floor(Math.random() * 8) + 7; // Random number of nodes between 7 and 14
+
+      for (let i = 0; i < numNodes; i++) {
+        const x = Math.floor(Math.random() * (WIDTH - 100)) + 50;
+        const y = Math.floor(Math.random() * (HEIGHT - 100)) + 50;
+        nodes.push(new Node(i, x, y));
+      }
+
+      // Connect nodes randomly
+      for (let i = 0; i < numNodes; i++) {
+        const numNeighbors = Math.floor(Math.random() * 3) + 1; // Random number of neighbors between 1 and 3
+        const availableNodes = Array.from({ length: numNodes }, (_, index) => index).filter((n) => n !== i);
+
+        for (let j = 0; j < numNeighbors; j++) {
+          if (availableNodes.length === 0) break;
+          const randomIndex = Math.floor(Math.random() * availableNodes.length);
+          const neighbor = availableNodes[randomIndex];
+          const weight = Math.floor(Math.random() * 10) + 1; // Random edge weight between 1 and 10
+          nodes[i].addNeighbor(neighbor, weight);
+          nodes[neighbor].addNeighbor(i, weight);
+          availableNodes.splice(randomIndex, 1);
+        }
+      }
+
+      drawGraph(nodes);
+      return nodes;
+    }
+
+    // Function to run Dijkstra's algorithm simulation
+    async function runDijkstra() {
+      const nodes = generateGraph();
+      const source = 0;
+      const { shortestPath, shortestDistances } = await dijkstra(nodes, source);
+      drawShortestPath(nodes, shortestPath);
+      displayResult(shortestPath, shortestDistances);
+    }
+
+    // Function to run Dijkstra's algorithm
+    async function dijkstra(nodes, source) {
+      nodes[source].distance = 0;
+      const pq = [{ node: source, distance: 0 }];
+
+      while (pq.length > 0) {
+        pq.sort((a, b) => a.distance - b.distance);
+        const { node: u } = pq.shift();
+
+        if (nodes[u].visited) {
+          continue;
+        }
+
+        nodes[u].visited = true;
+
+        for (const { node: v, weight } of nodes[u].neighbors) {
+          if (!nodes[v].visited && nodes[u].distance + weight < nodes[v].distance) {
+            nodes[v].distance = nodes[u].distance + weight;
+            nodes[v].previous = u;
+            pq.push({ node: v, distance: nodes[v].distance });
+          }
+        }
+
+        drawGraph(nodes);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+
+      // Calculate the shortest path
+      const shortestPath = [];
+      let node = nodes.length - 1;
+      while (node !== null) {
+        shortestPath.unshift(nodes[node]);
+        node = nodes[node].previous;
+      }
+
+      return { shortestPath, shortestDistances: nodes.map(node => node.distance) };
+    }
+
+    // Function to display the final result
+    function displayResult(shortestPath, shortestDistances) {
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "";
+
+      const table = document.createElement("table");
+      const headerRow = document.createElement("tr");
+
+      const sourceHeader = document.createElement("th");
+      sourceHeader.textContent = "Source";
+      headerRow.appendChild(sourceHeader);
+
+      const destinationHeader = document.createElement("th");
+      destinationHeader.textContent = "Destination";
+      headerRow.appendChild(destinationHeader);
+
+      const distanceHeader = document.createElement("th");
+      distanceHeader.textContent = "Distance";
+      headerRow.appendChild(distanceHeader);
+
+      table.appendChild(headerRow);
+
+      shortestDistances.forEach((distance, index) => {
+        const row = document.createElement("tr");
+
+        const sourceCell = document.createElement("td");
+        sourceCell.textContent = "0";
+        row.appendChild(sourceCell);
+
+        const destinationCell = document.createElement("td");
+        destinationCell.textContent = index.toString();
+        row.appendChild(destinationCell);
+
+        const distanceCell = document.createElement("td");
+        distanceCell.textContent = distance === Infinity ? "INF" : distance.toString();
+        row.appendChild(distanceCell);
+
+        table.appendChild(row);
+      });
+
+      resultDiv.appendChild(table);
+    }
+  </script>
+</body>
+</html>

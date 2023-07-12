@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Graph Algorithms Visualizer</title>
+    <style>
+      /* CSS styles for the webpage */
+      body {
+        background-color: #f2f2f2;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+      }
+
+      .container {
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 20px;
+      }
+
+      .graph-section {
+        width: 400px;
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+      }
+
+      .canvas {
+        width: 100%;
+        height: 300px;
+        border: 1px solid #ddd;
+        margin-bottom: 10px;
+      }
+
+      .result-table {
+        width: 100%;
+        margin-top: 10px;
+        border-collapse: collapse;
+      }
+
+      .result-table th,
+      .result-table td {
+        padding: 8px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .result-table th {
+        background-color: #f2f2f2;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Graph Algorithms Visualizer</h1>
+
+    <div class="container">
+      <div class="graph-section">
+        <h2>Dijkstra Algorithm</h2>
+        <canvas id="dijkstraCanvas" class="canvas"></canvas>
+        <button id="dijkstraGenerateBtn">Generate Graph</button>
+        <button id="dijkstraRunBtn">Run Dijkstra</button>
+        <table id="dijkstraResultTable" class="result-table"></table>
+      </div>
+
+      <div class="graph-section">
+        <h2>Floyd-Warshall Algorithm</h2>
+        <canvas id="floydWarshallCanvas" class="canvas"></canvas>
+        <button id="floydWarshallGenerateBtn">Generate Graph</button>
+        <button id="floydWarshallRunBtn">Run Floyd-Warshall</button>
+        <table id="floydWarshallResultTable" class="result-table"></table>
+      </div>
+
+      <div class="graph-section">
+        <h2>Prim's Algorithm</h2>
+        <canvas id="primCanvas" class="canvas"></canvas>
+        <button id="primGenerateBtn">Generate Graph</button>
+        <button id="primRunBtn">Run Prim</button>
+        <table id="primResultTable" class="result-table"></table>
+      </div>
+    </div>
+
+    <script>
+      // JavaScript code for graph algorithms visualization
+
+      // Graph data structure
+      class Graph {
+        constructor() {
+          this.nodes = [];
+          this.edges = [];
+        }
+
+        addNode(label) {
+          this.nodes.push({ label });
+        }
+
+        addEdge(source, destination, weight) {
+          this.edges.push({ source, destination, weight });
+        }
+      }
+
+      // Function to generate a random graph
+      function generateRandomGraph(numNodes, numEdges) {
+        const graph = new Graph();
+        for (let i = 0; i < numNodes; i++) {
+          graph.addNode(i);
+        }
+        for (let i = 0; i < numEdges; i++) {
+          const source = Math.floor(Math.random() * numNodes);
+          let destination = Math.floor(Math.random() * numNodes);
+          while (destination === source) {
+            destination = Math.floor(Math.random() * numNodes);
+          }
+          const weight = Math.floor(Math.random() * 10) + 1; // Random weight between 1 and 10
+          graph.addEdge(source, destination, weight);
+        }
+        return graph;
+      }
+
+      // Function to display the graph on the canvas
+      function displayGraph(canvasId, graph) {
+        const canvas = document.getElementById(canvasId);
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const nodeRadius = 20;
+        const canvasPadding = 40;
+
+        const numNodes = graph.nodes.length;
+        const angle = (2 * Math.PI) / numNodes;
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2;
+
+        // Draw nodes
+        for (let i = 0; i < numNodes; i++) {
+          const x = centerX + Math.cos(i * angle) * (canvas.width / 3);
+          const y = centerY + Math.sin(i * angle) * (canvas.height / 3);
+
+          ctx.beginPath();
+          ctx.arc(x, y, nodeRadius, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = "#000000";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = "12px Arial";
+          ctx.fillText(graph.nodes[i].label, x, y);
+        }
+
+        // Draw edges
+        for (const edge of graph.edges) {
+          const sourceNode = graph.nodes[edge.source];
+          const destinationNode = graph.nodes[edge.destination];
+
+          const sourceX =
+            centerX + Math.cos(edge.source * angle) * (canvas.width / 3);
+          const sourceY =
+            centerY + Math.sin(edge.source * angle) * (canvas.height / 3);
+
+          const destX =
+            centerX + Math.cos(edge.destination * angle) * (canvas.width / 3);
+          const destY =
+            centerY + Math.sin(edge.destination * angle) * (canvas.height / 3);
+
+          ctx.beginPath();
+          ctx.moveTo(sourceX, sourceY);
+          ctx.lineTo(destX, destY);
+          ctx.stroke();
+
+          const textX = (sourceX + destX) / 2;
+          const textY = (sourceY + destY) / 2;
+          ctx.fillStyle = "#000000";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.font = "12px Arial";
+          ctx.fillText(edge.weight, textX, textY);
+        }
+      }
+
+      // Function to run Dijkstra's algorithm
+      function runDijkstra() {
+        const graph = generateRandomGraph(7, 15); // Change the number of nodes and edges as per your requirement
+        displayGraph("dijkstraCanvas", graph);
+
+        // ... Dijkstra's Algorithm code ...
+        // Dijkstra's Algorithm
+
+        // Dijkstra's algorithm global variables
+        const dijkstraNodes = [];
+        const dijkstraEdges = [];
+
+        // Function to generate a random graph for Dijkstra's algorithm
+        function generateDijkstraGraph() {
+          // Clear the previous graph
+          dijkstraNodes.length = 0;
+          dijkstraEdges.length = 0;
+
+          // Generate random nodes
+          for (let i = 0; i < 10; i++) {
+            const x =
+              Math.floor(Math.random() * (WIDTH - canvasMargin * 2)) +
+              canvasMargin;
+            const y =
+              Math.floor(Math.random() * (HEIGHT - canvasMargin * 2)) +
+              canvasMargin;
+            const node = new Node(i, x, y);
+            dijkstraNodes.push(node);
+          }
+
+          // Generate random edges
+          for (let i = 0; i < dijkstraNodes.length; i++) {
+            for (let j = i + 1; j < dijkstraNodes.length; j++) {
+              const startNode = dijkstraNodes[i];
+              const endNode = dijkstraNodes[j];
+              const weight = Math.floor(Math.random() * 10) + 1;
+              const edge = new Edge(startNode, endNode, weight);
+              dijkstraEdges.push(edge);
+            }
+          }
+
+          // Update the canvas to show the generated graph
+          drawGraph("dijkstraCanvas", dijkstraNodes, dijkstraEdges);
+        }
+
+        // Function to run Dijkstra's algorithm
+        async function runDijkstra() {
+          if (dijkstraNodes.length === 0 || dijkstraEdges.length === 0) {
+            alert("Please generate a graph for Dijkstra's algorithm.");
+            return;
+          }
+
+          // Reset the visited status of all nodes
+          for (const node of dijkstraNodes) {
+            node.visited = false;
+          }
+
+          const sourceNode = dijkstraNodes[0];
+          sourceNode.distance = 0;
+
+          const unvisitedNodes = [...dijkstraNodes];
+
+          while (unvisitedNodes.length > 0) {
+            // Sort the unvisited nodes by distance
+            unvisitedNodes.sort((a, b) => a.distance - b.distance);
+
+            const currentNode = unvisitedNodes.shift();
+            currentNode.visited = true;
+
+            // Update the canvas to show the visited node
+            drawGraph(
+              "dijkstraCanvas",
+              dijkstraNodes,
+              dijkstraEdges,
+              currentNode
+            );
+
+            await sleep(1000); // Delay for visualization
+
+            for (const edge of dijkstraEdges) {
+              if (edge.startNode === currentNode && !edge.endNode.visited) {
+                const newDistance = currentNode.distance + edge.weight;
+                if (newDistance < edge.endNode.distance) {
+                  edge.endNode.distance = newDistance;
+                  edge.endNode.previousNode = currentNode;
+                }
+              }
+            }
+          }
+
+          // Show the shortest path in the result div
+          const dijkstraResultDiv = document.getElementById("dijkstraResult");
+          dijkstraResultDiv.innerHTML = "<h3>Shortest Path:</h3>";
+          for (const node of dijkstraNodes) {
+            if (node.previousNode) {
+              dijkstraResultDiv.innerHTML += `${node.index} -> `;
+            }
+          }
+          dijkstraResultDiv.innerHTML += `${
+            dijkstraNodes[dijkstraNodes.length - 1].index
+          }`;
+        }
+
+        // Display the result in tabular form
+        displayResult("dijkstra", result);
+      }
+
+      // Function to run Floyd-Warshall algorithm
+      function runFloydWarshall() {
+        const graph = generateRandomGraph(7, 15); // Change the number of nodes and edges as per your requirement
+        displayGraph("floydWarshallCanvas", graph);
+
+        // ... Floyd-Warshall Algorithm code ...
+        // Floyd-Warshall Algorithm
+
+        // Floyd-Warshall algorithm global variables
+        const floydWarshallNodes = [];
+        const floydWarshallEdges = [];
+
+        // Function to generate a random graph for Floyd-Warshall algorithm
+        function generateFloydWarshallGraph() {
+          // Clear the previous graph
+          floydWarshallNodes.length = 0;
+          floydWarshallEdges.length = 0;
+
+          // Generate random nodes
+          for (let i = 0; i < 5; i++) {
+            const x =
+              Math.floor(Math.random() * (WIDTH - canvasMargin * 2)) +
+              canvasMargin;
+            const y =
+              Math.floor(Math.random() * (HEIGHT - canvasMargin * 2)) +
+              canvasMargin;
+            const node = new Node(i, x, y);
+            floydWarshallNodes.push(node);
+          }
+
+          // Generate random edges
+          for (let i = 0; i < floydWarshallNodes.length; i++) {
+            for (let j = 0; j < floydWarshallNodes.length; j++) {
+              if (i !== j) {
+                const startNode = floydWarshallNodes[i];
+                const endNode = floydWarshallNodes[j];
+                const weight = Math.floor(Math.random() * 10) + 1;
+                const edge = new Edge(startNode, endNode, weight);
+                floydWarshallEdges.push(edge);
+              }
+            }
+          }
+
+          // Update the canvas to show the generated graph
+          drawGraph(
+            "floydWarshallCanvas",
+            floydWarshallNodes,
+            floydWarshallEdges
+          );
+        }
+
+        // Function to run Floyd-Warshall algorithm
+        async function runFloydWarshall() {
+          if (
+            floydWarshallNodes.length === 0 ||
+            floydWarshallEdges.length === 0
+          ) {
+            alert("Please generate a graph for Floyd-Warshall algorithm.");
+            return;
+          }
+
+          const numNodes = floydWarshallNodes.length;
+          const distances = Array.from({ length: numNodes }, () =>
+            Array.from({ length: numNodes }, () => Infinity)
+          );
+          const nextNodes = Array.from({ length: numNodes }, () =>
+            Array.from({ length: numNodes }, () => null)
+          );
+
+          for (let i = 0; i < numNodes; i++) {
+            distances[i][i] = 0;
+          }
+
+          for (const edge of floydWarshallEdges) {
+            const { startNode, endNode, weight } = edge;
+            distances[startNode.index][endNode.index] = weight;
+            nextNodes[startNode.index][endNode.index] = endNode;
+          }
+
+          for (let k = 0; k < numNodes; k++) {
+            for (let i = 0; i < numNodes; i++) {
+              for (let j = 0; j < numNodes; j++) {
+                if (distances[i][k] + distances[k][j] < distances[i][j]) {
+                  distances[i][j] = distances[i][k] + distances[k][j];
+                  nextNodes[i][j] = nextNodes[i][k];
+                }
+              }
+            }
+
+            // Update the canvas to show the intermediate step
+            drawGraph(
+              "floydWarshallCanvas",
+              floydWarshallNodes,
+              floydWarshallEdges
+            );
+
+            await sleep(1000); // Delay for visualization
+          }
+
+          // Show the shortest path in the result div
+          const floydWarshallResultDiv = document.getElementById(
+            "floydWarshallResult"
+          );
+          floydWarshallResultDiv.innerHTML = "<h3>Shortest Path:</h3>";
+          for (let i = 0; i < numNodes; i++) {
+            for (let j = 0; j < numNodes; j++) {
+              if (nextNodes[i][j]) {
+                floydWarshallResultDiv.innerHTML += `${i} -> ${j} (Weight: ${distances[i][j]})<br>`;
+              }
+            }
+          }
+        }
+
+        // Display the result in tabular form
+        displayResult("floydWarshall", result);
+      }
+
+      // Function to run Prim's algorithm
+      function runPrim() {
+        const graph = generateRandomGraph(7, 15); // Change the number of nodes and edges as per your requirement
+        displayGraph("primCanvas", graph);
+
+        // ... Prim's Algorithm code ...
+        // Prim's Algorithm
+
+        // Prim's algorithm global variables
+        const primNodes = [];
+        const primEdges = [];
+
+        // Function to generate a random graph for Prim's algorithm
+        function generatePrimGraph() {
+          // Clear the previous graph
+          primNodes.length = 0;
+          primEdges.length = 0;
+
+          // Generate random nodes
+          for (let i = 0; i < 10; i++) {
+            const x =
+              Math.floor(Math.random() * (WIDTH - canvasMargin * 2)) +
+              canvasMargin;
+            const y =
+              Math.floor(Math.random() * (HEIGHT - canvasMargin * 2)) +
+              canvasMargin;
+            const node = new Node(i, x, y);
+            primNodes.push(node);
+          }
+
+          // Generate random edges
+          for (let i = 0; i < primNodes.length; i++) {
+            for (let j = i + 1; j < primNodes.length; j++) {
+              const startNode = primNodes[i];
+              const endNode = primNodes[j];
+              const weight = Math.floor(Math.random() * 10) + 1;
+              const edge = new Edge(startNode, endNode, weight);
+              primEdges.push(edge);
+            }
+          }
+
+          // Update the canvas to show the generated graph
+          drawGraph("primCanvas", primNodes, primEdges);
+        }
+
+        // Function to run Prim's algorithm
+        async function runPrim() {
+          if (primNodes.length === 0 || primEdges.length === 0) {
+            alert("Please generate a graph for Prim's algorithm.");
+            return;
+          }
+
+          // Reset the visited status of all nodes
+          for (const node of primNodes) {
+            node.visited = false;
+          }
+
+          const sourceNode = primNodes[0];
+          sourceNode.visited = true;
+
+          const visitedNodes = [sourceNode];
+          const visitedEdges = [];
+
+          while (visitedNodes.length < primNodes.length) {
+            let minEdge = null;
+            let minWeight = Infinity;
+
+            for (const visitedNode of visitedNodes) {
+              for (const edge of primEdges) {
+                if (
+                  (edge.startNode === visitedNode && !edge.endNode.visited) ||
+                  (edge.endNode === visitedNode && !edge.startNode.visited)
+                ) {
+                  if (edge.weight < minWeight) {
+                    minEdge = edge;
+                    minWeight = edge.weight;
+                  }
+                }
+              }
+            }
+
+            if (minEdge) {
+              minEdge.startNode.visited = true;
+              minEdge.endNode.visited = true;
+              visitedEdges.push(minEdge);
+              visitedNodes.push(minEdge.startNode, minEdge.endNode);
+            }
+
+            // Update the canvas to show the visited edges
+            drawGraph("primCanvas", primNodes, primEdges, null, visitedEdges);
+
+            await sleep(1000); // Delay for visualization
+          }
+        }
+
+        // Helper function to create a delay
+        function sleep(ms) {
+          return new Promise((resolve) => setTimeout(resolve, ms));
+        }
+
+        // Display the result in tabular form
+        displayResult("prim", result);
+      }
+
+      // Function to display the result in tabular form
+      function displayResult(algorithm, result) {
+        const resultTable = document.getElementById(`${algorithm}ResultTable`);
+        resultTable.innerHTML = "";
+        if (result.length > 0) {
+          const headerRow = document.createElement("tr");
+          const headerColumns = ["Source", "Destination", "Path", "Weight"];
+          for (const column of headerColumns) {
+            const th = document.createElement("th");
+            th.textContent = column;
+            headerRow.appendChild(th);
+          }
+          resultTable.appendChild(headerRow);
+
+          for (const item of result) {
+            const row = document.createElement("tr");
+            const columns = [
+              item.source,
+              item.destination,
+              item.path.join(" -> "),
+              item.weight,
+            ];
+            for (const column of columns) {
+              const td = document.createElement("td");
+              td.textContent = column;
+              row.appendChild(td);
+            }
+            resultTable.appendChild(row);
+          }
+        } else {
+          const noResultRow = document.createElement("tr");
+          const noResultCell = document.createElement("td");
+          noResultCell.setAttribute("colspan", "4");
+          noResultCell.textContent = "No result";
+          noResultRow.appendChild(noResultCell);
+          resultTable.appendChild(noResultRow);
+        }
+      }
+
+      // Event listeners for the buttons
+      document
+        .getElementById("dijkstraGenerateBtn")
+        .addEventListener("click", runDijkstra);
+      document
+        .getElementById("floydWarshallGenerateBtn")
+        .addEventListener("click", runFloydWarshall);
+      document
+        .getElementById("primGenerateBtn")
+        .addEventListener("click", runPrim);
+    </script>
+  </body>
+</html>

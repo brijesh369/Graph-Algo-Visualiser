@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Prim's Algorithm Visualizer</title>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #canvas {
+      border: 1px solid black;
+      margin-bottom: 20px;
+    }
+
+    table {
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="800" height="600"></canvas>
+  <br/>
+  <button onclick="generateGraph()">Generate Random Graph</button>
+  <button onclick="runPrims()">Run Prim's Algorithm</button>
+
+  <div id="result"></div>
+
+  <script>
+    // Colors
+    const COLORS = {
+      WHITE: "#ffffff",
+      BLACK: "#000000",
+      GREEN: "#00ff00",
+      RED: "#ff0000",
+      BLUE: "#0000ff",
+      YELLOW: "#ffff00",
+    };
+
+    // Canvas dimensions
+    const WIDTH = 800;
+    const HEIGHT = 600;
+
+    // Create canvas element
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+
+    // Class to represent a node
+    class Node {
+      constructor(index, x, y) {
+        this.index = index;
+        this.x = x;
+        this.y = y;
+        this.visited = false;
+      }
+    }
+
+    // Class to represent an edge
+    class Edge {
+      constructor(startNode, endNode, weight) {
+        this.startNode = startNode;
+        this.endNode = endNode;
+        this.weight = weight;
+      }
+    }
+
+    // Function to draw the graph on the canvas
+    function drawGraph(nodes, edges, selectedNode = null) {
+      ctx.fillStyle = COLORS.WHITE;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      for (const node of nodes) {
+        ctx.fillStyle = COLORS.BLACK;
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.font = "10px Arial";
+        ctx.fillStyle = COLORS.WHITE;
+        ctx.textAlign = "center";
+        ctx.fillText(node.index.toString(), node.x, node.y + 3);
+      }
+
+      for (const edge of edges) {
+        const { startNode, endNode, weight } = edge;
+
+        ctx.strokeStyle = COLORS.BLACK;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(startNode.x, startNode.y);
+        ctx.lineTo(endNode.x, endNode.y);
+        ctx.stroke();
+
+        const midX = (startNode.x + endNode.x) / 2;
+        const midY = (startNode.y + endNode.y) / 2;
+
+        ctx.font = "10px Arial";
+        ctx.fillStyle = COLORS.BLUE;
+        ctx.textAlign = "center";
+        ctx.fillText(weight.toString(), midX, midY);
+      }
+
+      if (selectedNode) {
+        ctx.fillStyle = COLORS.GREEN;
+        ctx.beginPath();
+        ctx.arc(selectedNode.x, selectedNode.y, 10, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Function to generate a random graph with at least 7 nodes
+    function generateGraph() {
+      const nodes = [];
+      const edges = [];
+
+      const numNodes = Math.floor(Math.random() * 8) + 7; // Random number of nodes between 7 and 14
+
+      for (let i = 0; i < numNodes; i++) {
+        const x = Math.floor(Math.random() * (WIDTH - 100)) + 50;
+        const y = Math.floor(Math.random() * (HEIGHT - 100)) + 50;
+        nodes.push(new Node(i, x, y));
+      }
+
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const weight = Math.floor(Math.random() * 10) + 1; // Random weight between 1 and 10
+          edges.push(new Edge(nodes[i], nodes[j], weight));
+        }
+      }
+
+      drawGraph(nodes, edges);
+      return { nodes, edges };
+    }
+
+    // Function to calculate the distance between two nodes
+    function calculateDistance(node1, node2) {
+      const dx = node2.x - node1.x;
+      const dy = node2.y - node1.y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Function to run Prim's algorithm simulation
+    async function runPrims() {
+      const { nodes, edges } = generateGraph();
+
+      const numNodes = nodes.length;
+      const selectedNodes = [nodes[0]];
+      const selectedEdges = [];
+      let selectedNode = null;
+
+      while (selectedNodes.length < numNodes) {
+        let minDistance = Infinity;
+        let nearestNode = null;
+        let nearestEdge = null;
+
+        for (const node of selectedNodes) {
+          for (const edge of edges) {
+            if (!selectedNodes.includes(edge.endNode) && edge.startNode === node) {
+              const distance = edge.weight;
+              if (distance < minDistance) {
+                minDistance = distance;
+                nearestNode = edge.endNode;
+                nearestEdge = edge;
+                selectedNode = node;
+              }
+            }
+          }
+        }
+
+        selectedNodes.push(nearestNode);
+        selectedEdges.push(nearestEdge);
+
+        drawGraph(nodes, edges, selectedNode);
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Increase delay to 1 second
+      }
+
+      drawGraph(nodes, edges);
+      displayResult(selectedEdges);
+    }
+
+    // Function to display the final result
+    function displayResult(selectedEdges) {
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = "";
+
+      if (selectedEdges.length > 0) {
+        const table = document.createElement("table");
+        const headerRow = document.createElement("tr");
+
+        const startNodeHeader = document.createElement("th");
+        startNodeHeader.textContent = "Start Node";
+        headerRow.appendChild(startNodeHeader);
+
+        const endNodeHeader = document.createElement("th");
+        endNodeHeader.textContent = "End Node";
+        headerRow.appendChild(endNodeHeader);
+
+        const weightHeader = document.createElement("th");
+        weightHeader.textContent = "Weight";
+        headerRow.appendChild(weightHeader);
+
+        table.appendChild(headerRow);
+
+        for (const edge of selectedEdges) {
+          const row = document.createElement("tr");
+
+          const startNodeCell = document.createElement("td");
+          startNodeCell.textContent = edge.startNode.index.toString();
+          row.appendChild(startNodeCell);
+
+          const endNodeCell = document.createElement("td");
+          endNodeCell.textContent = edge.endNode.index.toString();
+          row.appendChild(endNodeCell);
+
+          const weightCell = document.createElement("td");
+          weightCell.textContent = edge.weight.toString();
+          row.appendChild(weightCell);
+
+          table.appendChild(row);
+        }
+
+        resultDiv.appendChild(table);
+      } else {
+        const message = document.createElement("p");
+        message.textContent = "No edges were selected. Prim's algorithm cannot form a minimum spanning tree.";
+        resultDiv.appendChild(message);
+      }
+    }
+  </script>
+</body>
+</html>
